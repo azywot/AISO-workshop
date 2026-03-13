@@ -6,14 +6,14 @@ def read_image(file_path: str, question: str) -> str:
     """Analyze an image file and answer a question about it.
 
     Use this tool whenever a question references an image file (jpg, jpeg, png, gif, webp).
-    Pass the exact file path and the full question to get an answer.
+    Pass the exact file path and a question describing what data to extract from the image.
 
     Args:
         file_path: The path to the image file to analyze.
-        question: The question to answer about the image.
+        question: The question to answer about the image. Be specific about what data to extract.
 
     Returns:
-        The answer to the question based on the image content.
+        The extracted data and answer based on the image content.
     """
     try:
         from google import genai
@@ -24,6 +24,9 @@ def read_image(file_path: str, question: str) -> str:
         if not resolved.is_absolute():
             project_root = pathlib.Path(__file__).parent.parent.parent
             resolved = project_root / file_path
+
+        if not resolved.exists():
+            return f"Error: File not found at '{resolved}'."
 
         with open(resolved, "rb") as f:
             image_data = f.read()
@@ -40,10 +43,10 @@ def read_image(file_path: str, question: str) -> str:
 
         client = genai.Client(api_key=os.environ.get("GOOGLE_API_KEY"))
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-2.5-flash",
             contents=[
                 types.Part.from_bytes(data=image_data, mime_type=media_type),
-                question,
+                f"Analyze this image carefully. Extract ALL visible data including text, numbers, tables, labels, pricing plans, math problems, written answers, board positions, and any other relevant information.\n\nThen answer this question:\n{question}\n\nBe precise and specific in your answer.",
             ],
         )
         return response.text or "No response from image model."

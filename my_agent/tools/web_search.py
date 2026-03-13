@@ -6,7 +6,6 @@ Provider is selected automatically based on available API keys:
 - If TAVILY_API_KEY is set, uses Tavily
 """
 
-import json
 import logging
 import os
 
@@ -16,8 +15,8 @@ from bs4 import BeautifulSoup
 logger = logging.getLogger(__name__)
 
 
-TOP_K = 5
-MAX_DOC_LEN = 5000
+TOP_K = 10
+MAX_DOC_LEN = 10000
 
 
 def _fetch_url_content(url: str) -> str:
@@ -59,7 +58,7 @@ def _search_serper(query: str, api_key: str) -> list[dict]:
         results.append({
             "title": organic.get("title", ""),
             "url": url,
-            "content": (content or snippet)[:MAX_DOC_LEN * 2],
+            "content": (content or snippet)[:MAX_DOC_LEN],
         })
     logger.info("Serper returned %d results", len(results))
     return results
@@ -78,29 +77,31 @@ def _search_tavily(query: str, api_key: str) -> list[dict]:
         results.append({
             "title": result.get("title", ""),
             "url": result.get("url", ""),
-            "content": content[:MAX_DOC_LEN * 2],
+            "content": content[:MAX_DOC_LEN],
         })
     logger.info("Tavily returned %d results", len(results))
     return results
 
 
 def _format_results(results: list[dict], query: str) -> str:
-    """Format search results into a document string."""
+    """Format search results into a readable document string."""
     if not results:
         return f"No results found for query: {query}"
-    formatted = ""
+    formatted_parts = []
     for i, doc in enumerate(results):
-        formatted += f"**Web Page {i + 1}:**\n"
-        formatted += json.dumps(
-            {"title": doc.get("title", ""), "content": doc.get("content", "")},
-            ensure_ascii=False,
-            indent=2,
-        ) + "\n"
-    return formatted.strip()
+        title = doc.get("title", "No title")
+        url = doc.get("url", "")
+        content = doc.get("content", "No content available")
+        formatted_parts.append(
+            f"--- Result {i + 1}: {title} ---\n"
+            f"URL: {url}\n"
+            f"{content}\n"
+        )
+    return "\n".join(formatted_parts).strip()
 
 
 def web_search(query: str) -> str:
-    """Search the web and return results.
+    """Search the web and return results with content.
 
     Use this tool when you need to find information on the internet, look up
     current facts, find URLs for specific topics, or answer questions that
@@ -110,10 +111,10 @@ def web_search(query: str) -> str:
         query: The search query string.
 
     Returns:
-        A list of search results with titles, URLs, and snippets.
+        Formatted search results with titles, URLs, and content.
     """
     # NOTE: use tavily
-    serper_key = None # os.getenv("SERPER_API_KEY")
+    serper_key = None  # os.getenv("SERPER_API_KEY")
     tavily_key = os.getenv("TAVILY_API_KEY")
 
     try:
@@ -126,9 +127,6 @@ def web_search(query: str) -> str:
             return "Error: No web search API key found. Set SERPER_API_KEY or TAVILY_API_KEY."
         formatted = _format_results(results, query)
         logger.debug("web_search result for %r:\n%s", query, formatted)
-        print(f"web_search result for {query}:\n{formatted}")
-        with open("results_search.txt", "a", encoding="utf-8") as f:
-            f.write(f"Query: {query}\n{formatted}\n{'=' * 80}\n")
         return formatted
     except Exception as e:
         logger.error("web_search failed for %r: %s", query, e, exc_info=True)
