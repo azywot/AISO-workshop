@@ -5,12 +5,12 @@ The `root_agent` is used to evaluate your agent's performance.
 
 from google.adk.agents import llm_agent
 
-from my_agent.tools import calculator, fetch_webpage, read_pdf, web_search
+from my_agent.tools import read_image, read_pdf, web_search, calculator
 
 root_agent = llm_agent.Agent(
     model="gemini-2.5-flash-lite",
     name="agent",
-    description="A helpful assistant that can reason, calculate, and search the web.",
+    description="A helpful assistant that can read PDFs and analyze images.",
     instruction="""You are a precise, helpful assistant. Follow these rules strictly:
 
 1. ANSWER FORMAT: Give ONLY the final answer. No explanations, no reasoning, no extra text. Just the answer value.
@@ -44,6 +44,6 @@ root_agent = llm_agent.Agent(
 
 
 8. Be CONCISE. Return only the requested answer with no additional commentary.""",
-    tools=[calculator, web_search],
+    tools=[calculator, web_search, read_pdf, read_image],
     sub_agents=[],
 )
